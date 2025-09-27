@@ -2,6 +2,7 @@ package com.example.lab_week_05
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.lab_week_05.api.CatApiService
@@ -12,12 +13,16 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 class MainActivity : AppCompatActivity() {
 
     private lateinit var apiResponseView: TextView
+    private lateinit var imageResultView: ImageView
+    private lateinit var imageLoader: ImageLoader
+
     private val retrofit by lazy {
         Retrofit.Builder()
             .baseUrl("https://api.thecatapi.com/v1/")
             .addConverterFactory(MoshiConverterFactory.create())
             .build()
     }
+
     private val catApiService by lazy {
         retrofit.create(CatApiService::class.java)
     }
@@ -27,31 +32,39 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         apiResponseView = findViewById(R.id.api_response)
+        imageResultView = findViewById(R.id.image_result)
+        imageLoader = GlideLoader(this)
+
         getCatImageResponse()
     }
 
     private fun getCatImageResponse() {
         val call = catApiService.searchImages(1, "full")
         call.enqueue(object : Callback<List<ImageData>> {
+            override fun onFailure(call: Call<List<ImageData>>, t: Throwable) {
+                Log.e(MAIN_ACTIVITY, "Failed to get response", t)
+            }
+
             override fun onResponse(
                 call: Call<List<ImageData>>,
                 response: Response<List<ImageData>>
             ) {
                 if (response.isSuccessful) {
-                    val images = response.body()
-                    if (!images.isNullOrEmpty()) {
-                        val firstImage = images[0]
-                        apiResponseView.text = firstImage.imageUrl
+                    val image = response.body()
+                    val firstImage = image?.firstOrNull()?.imageUrl.orEmpty()
+
+                    if (firstImage.isNotBlank()) {
+                        imageLoader.loadImage(firstImage, imageResultView)
+                        apiResponseView.text = getString(R.string.image_placeholder, firstImage)
                     } else {
-                        apiResponseView.text = "No images found"
+                        Log.d(MAIN_ACTIVITY, "Missing image URL")
                     }
                 } else {
-                    Log.e(MAIN_ACTIVITY, "Response error: ${response.errorBody()?.string()}")
+                    Log.e(
+                        MAIN_ACTIVITY,
+                        "Failed to get response\n${response.errorBody()?.string().orEmpty()}"
+                    )
                 }
-            }
-
-            override fun onFailure(call: Call<List<ImageData>>, t: Throwable) {
-                Log.e(MAIN_ACTIVITY, "Network error", t)
             }
         })
     }
