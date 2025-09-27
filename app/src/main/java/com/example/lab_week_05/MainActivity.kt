@@ -55,10 +55,18 @@ class MainActivity : AppCompatActivity() {
 
                     if (firstImage.isNotBlank()) {
                         imageLoader.loadImage(firstImage, imageResultView)
-                        apiResponseView.text = getString(R.string.image_placeholder, firstImage)
                     } else {
                         Log.d(MAIN_ACTIVITY, "Missing image URL")
                     }
+
+                    // ✅ Breed name or "Unknown"
+                    val breedName = if (!image.isNullOrEmpty() && !image[0].breeds.isNullOrEmpty()) {
+                        image[0].breeds?.firstOrNull()?.name ?: "Unknown"
+                    } else {
+                        "Unknown"
+                    }
+
+                    apiResponseView.text = "Breed: $breedName"
                 } else {
                     Log.e(
                         MAIN_ACTIVITY,
@@ -68,6 +76,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
     }
+
 
     companion object {
         private const val MAIN_ACTIVITY = "MAIN_ACTIVITY"
